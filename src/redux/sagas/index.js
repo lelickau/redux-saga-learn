@@ -1,29 +1,36 @@
-import {call, spawn, all, fork, delay} from 'redux-saga/effects'
+import {call, spawn, all, take, fork, takeLatest, cancel} from 'redux-saga/effects'
+import loadBasicData from './initialSagas'
+import pageLoaderSaga from './pageLoaderSaga'
 
-// асинхронные действия / запросы при входе в приложение
-function* auth() {
-    // delay() - ожидать(n секунд) (синхронный 'setTimeout')
-    yield delay(2000)
-    console.log('auth ok');
-    return true
+export function* fetchComment(signal) {
+    const res = yield call(fetch, 'https://jsonplaceholder.typicode.com/comments', {signal})
+    const data = yield call([res, res.json])
+
+    console.log('load some data', data);
+
 }
 
-function* loadUsers() {
-    const req = yield call(fetch, 'https://jsonplaceholder.typicode.com/users')
-    const data = yield call([req, req.json])
-    console.log('data', data);
-}
+export function* loadOnAction () {
+    // yield takeLatest('LOAD_SOME_DATA', fetchComment)
+    // takeLatest - берет последний вызов таск саги и исполняет тоько его, а предидущие отменяет
 
-export function* loadBasicData () {
-    yield all([
-        fork(auth),
-        fork(loadUsers)
-    ])
-}
+    let task;
+    let abortController = new AbortController()
 
+    while (true) {
+        yield take('LOAD_SOME_DATA')
+        if (task) {
+            abortController.abort()
+            yield cancel(task)
+            abortController = new AbortController()
+        }
+
+        task = yield fork(fetchComment, abortController.signal)
+    }
+}
 
 export default function* rootSaga() {
-    const sagas = [loadBasicData]
+    const sagas = [loadBasicData, pageLoaderSaga, loadOnAction]
 
     const retrySagas = sagas.map(saga => {
         return spawn(function* () {
@@ -40,5 +47,4 @@ export default function* rootSaga() {
     yield all(retrySagas)
 }
 
-// all - запускает несколько эффектов параллельно и ждет их завершения
 
