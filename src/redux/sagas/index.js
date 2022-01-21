@@ -1,9 +1,9 @@
-import {call, spawn, all, take, fork, takeLatest, cancel} from 'redux-saga/effects'
+import {call, spawn, all, take, fork, takeLatest, cancel, actionChannel} from 'redux-saga/effects'
 import loadBasicData from './initialSagas'
 import pageLoaderSaga from './pageLoaderSaga'
 
-export function* fetchComment(signal) {
-    const res = yield call(fetch, 'https://jsonplaceholder.typicode.com/comments', {signal})
+export function* fetchComment() {
+    const res = yield call(fetch, 'https://jsonplaceholder.typicode.com/comments')
     const data = yield call([res, res.json])
 
     console.log('load some data', data);
@@ -11,21 +11,11 @@ export function* fetchComment(signal) {
 }
 
 export function* loadOnAction () {
-    // yield takeLatest('LOAD_SOME_DATA', fetchComment)
-    // takeLatest - берет последний вызов таск саги и исполняет тоько его, а предидущие отменяет
-
-    let task;
-    let abortController = new AbortController()
-
+    const channel = yield actionChannel('LOAD_SOME_DATA')
     while (true) {
-        yield take('LOAD_SOME_DATA')
-        if (task) {
-            abortController.abort()
-            yield cancel(task)
-            abortController = new AbortController()
-        }
-
-        task = yield fork(fetchComment, abortController.signal)
+        yield take(channel)
+        yield call(fetchComment)
+        console.log('log');
     }
 }
 
