@@ -1,11 +1,12 @@
 import React from 'react';
-import {Link} from 'react-router-dom';
+import PeopleTable from '../components/PeopleTable';
+
 function App() {
 
   return (
-    <div>
-      <Link to={'/blog'}>Blog</Link>
-    </div>
+    <>
+      <PeopleTable/>
+    </>
   );
 }
 
